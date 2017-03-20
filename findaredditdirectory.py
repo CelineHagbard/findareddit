@@ -147,7 +147,7 @@ def main():
             pm_subreddits = scan_sub(reddit, subreddit)
             send_pm(reddit, pm_subreddits)
             if SAVE_NEWSUBS:
-                save_new_subs(reddit, reddit.subreddit("CelinesWorkshop"), pm_subreddits)
+                save_new_subs(reddit, subreddit, pm_subreddits)
             print ("Sleeping for 12 hours...\n")
             sleep(SLEEP_TIME)
             
