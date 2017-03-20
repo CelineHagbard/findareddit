@@ -1,6 +1,6 @@
 SUBREDDIT_NAME = "findareddit"
 # Username to send list to. Omit the /u/ or /user/
-PM_TO = ''
+PM_TO = 'WikiLeaksEmailBot'
 # Name of wiki page of main directory
 DIRECTORY_WIKI = 'directory'
 # Name of wiki page to store new subs that are found.
@@ -11,6 +11,8 @@ CHECK_NEWSUBS = True
 SAVE_NEWSUBS = True 
 # time in seconds
 SLEEP_TIME = 60 * 60 * 12
+# inital time to sleep if uncaught exceptions
+ERROR_SLEEP =  30
 PM_SUBJECT = 'Found new Subreddits!'
 PM_STRING = '''I found {} subreddits mentioned in the last 24 hours that aren't in the directory:
 

@@ -160,7 +160,7 @@ def main():
                 raise e
                 return
             failed_attempts += 1
-            error_sleep = 3 * failed_attempts
+            error_sleep = ERROR_SLEEP * failed_attempts
             print("Error. Sleeping {} seconds and trying again".format(error_sleep))
             sleep(error_sleep)
             
