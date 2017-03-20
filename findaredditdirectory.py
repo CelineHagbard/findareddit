@@ -6,7 +6,7 @@ from prawcore.exceptions import NotFound, Redirect, BadRequest, Forbidden
 
 SUBREDDIT_NAME = "findareddit"
 # Username to send list to. Omit the /u/ or /user/
-PM_TO = 'WikiLeaksEmailBot'
+PM_TO = ''
 # Name of wiki page of main directory
 DIRECTORY_WIKI = 'directory'
 # Name of wiki page to store new subs that are found.
