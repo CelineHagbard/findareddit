@@ -5,7 +5,7 @@ from prawcore.exceptions import NotFound, Redirect, BadRequest, Forbidden, Reque
 from constants import *
 
 wiki_regex = re.compile(r'/?r/([A-Za-z0-9_]+)[^A-Za-z0-9_]')
-dir_regex = re.compile(r'/?(r/([A-Za-z0-9_]+)/wiki/)?([A-Za-z0-9_]+)')
+dir_regex = re.compile(r'/?(r/([A-Za-z0-9_]+)/wiki/)?([A-Za-z0-9_/]+)')
 
 
 def send_pm(reddit, pm_subreddits):
