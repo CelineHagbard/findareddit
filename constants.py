@@ -1,8 +1,8 @@
 SUBREDDIT_NAME = "findareddit"
 # Username to send list to. Omit the /u/ or /user/
-PM_TO = 'WikiLeaksEmailBot'
-# Name of wiki page of main directory
-DIRECTORY_WIKI = 'directory'
+PM_TO = ''
+# List of wiki pages to exclude in search
+DIRECTORY_WIKIS = ['directory', '/r/sfwpornnetwork/wiki/network']
 # Name of wiki page to store new subs that are found.
 NEWSUBS_WIKI = 'newsubs'
 # if True, loads list of subs from NEWSUBS_WIKI

@@ -1,10 +1,11 @@
 import praw, re
 from datetime import timedelta, datetime
 from time import sleep
-from prawcore.exceptions import NotFound, Redirect, BadRequest, Forbidden
+from prawcore.exceptions import NotFound, Redirect, BadRequest, Forbidden, RequestException
 from constants import *
 
 wiki_regex = re.compile(r'/?r/([A-Za-z0-9_]+)[^A-Za-z0-9_]')
+dir_regex = re.compile(r'/?(r/([A-Za-z0-9_]+)/wiki/)?([A-Za-z0-9_]+)')
 
 
 def send_pm(reddit, pm_subreddits):
@@ -29,8 +30,7 @@ def save_new_subs(reddit, subreddit, pm_subreddits):
         return
 
     for subname in pm_subreddits:
-        line = "/r/{}|||{}".format(subname, 
-                reddit.subreddit(subname).public_description.replace('\n',' '))
+        line = "/r/{}|||{}".format(subname, pm_subreddits[subname][0])
         lines.append(line)
 
     now = datetime.utcnow().isoformat()
@@ -47,29 +47,40 @@ def save_new_subs(reddit, subreddit, pm_subreddits):
     print("Saving data to {}".format(NEWSUBS_WIKI))
 
 
-def get_wiki_subreddits(subreddit):
+def get_wiki_subreddits(reddit, subreddit):
     """ Builds a set() of subreddit names based on names found in 
         DIRECTORY_WIKI and NEWSUBS_WIKI if the contant CHECK_NEWSUBS == True
     """
-    wiki_text = subreddit.wiki[DIRECTORY_WIKI].content_md
-    if CHECK_NEWSUBS:
-        try:
-            wiki_text += subreddit.wiki[NEWSUBS_WIKI].content_md
-        except NotFound:
-            print ("New subs wiki not found.")
-            pass
-    matches = wiki_regex.findall(wiki_text)
-    dir_subreddits = set(m.lower() for m in matches)
+
+    dir_subreddits = set()
+    for wiki_name in DIRECTORY_WIKIS + [NEWSUBS_WIKI]:
+        match = dir_regex.match(wiki_name)
+        if match:
+            try:
+                if match.group(2):
+                    wiki_text = reddit.subreddit(match.group(2)) \
+                                       .wiki[match.group(3)].content_md
+                else:
+                    wiki_text = subreddit.wiki[match.group(3)].content_md
+                matches = wiki_regex.findall(wiki_text)
+                dir_subreddits.update(m.lower() for m in matches)
+                print("Added subs from {}. Total excluded subs: {} "
+                            .format(wiki_name, len(dir_subreddits)))
+            except NotFound:
+                print('Wiki page {} was not found.'.format(wiki_name))
+        else:
+            print("Wiki page '{}' does not appear to be valid syntax."
+                                                .format(wiki_name))
 
     return dir_subreddits 
 
 
-def scan_post(reddit, post, dir_subreddits = set(), pm_subreddits = set()):
+def scan_post(reddit, post, dir_subreddits = set(), pm_subreddits = dict()):
     """ Scans the text of comments in a post for subreddit names which are not
     in 'dir_subreddits', adds them to the set 'pm_subreddits', and returns it.
     """
     print('\nPost "{}", {}'.format(post.title, 
-                            datetime.utcfromtimestamp(post.created_utc).isoformat()))
+                datetime.utcfromtimestamp(post.created_utc).isoformat()))
     post.comments.replace_more(limit=None)
     comments_text = " ".join((c.body for c in post.comments.list()))
     #print (comments_text)
@@ -92,7 +103,7 @@ def scan_post(reddit, post, dir_subreddits = set(), pm_subreddits = set()):
                 print("    /r/{} is quarantined".format(subname))
                 continue
             else:
-                pm_subreddits.add(subname)
+                pm_subreddits[subname] = (sub.public_description.replace('\n',' '),)
                 print(" +  Adding /r/{} to PM list".format(subname))
         except (NotFound, Redirect):
             print("    /r/{} is not found.".format(subname))
@@ -112,14 +123,17 @@ def scan_sub(reddit, subreddit):
         Returns set pm_subreddits containing subreddit names found in the scan
     """
     posts = []
-    pm_subreddits = set()
-    dir_subreddits = get_wiki_subreddits(subreddit)
+    pm_subreddits = dict()
+    dir_subreddits = get_wiki_subreddits(reddit, subreddit)
     date_cutoff = datetime.utcnow() - timedelta(days=1)
+    after = None
     # Fetch up to 1000 posts, 100 each request, up to 24 hours ago
     for _ in range(10):
-        posts += list(subreddit.new(limit = 100))
+        posts += list(subreddit.new(limit = 100, params={'after':after}))
         if datetime.utcfromtimestamp(posts[-1].created_utc) < date_cutoff:
             break
+        else:
+            after = posts[-1].fullname
     # Iterate over each post that's less than 24 hours old
     print("Retrieved {} posts".format(len(posts)))
     for post in posts:
@@ -130,7 +144,7 @@ def scan_sub(reddit, subreddit):
     return pm_subreddits
 
 
-def main():
+def authenticate():
     reddit = praw.Reddit("findaredditdirectory")
     try:
         print("Logged in as {}".format(reddit.user.me().name))
@@ -140,6 +154,11 @@ def main():
         return
 
     subreddit = reddit.subreddit(SUBREDDIT_NAME)
+    return reddit, subreddit
+
+
+def main():
+    reddit, subreddit = authenticate()
     failed_attempts = 0
     while True:
         try:
@@ -152,7 +171,7 @@ def main():
             sleep(SLEEP_TIME)
             
             failed_attempts = 0
-        except Exception as e:
+        except RequestException as e:
             print (type(e))
             if failed_attempts > 5:
                 print("Script encountered more than 5 uncaught errors without a successful run")
